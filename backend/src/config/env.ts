@@ -21,7 +21,6 @@ for (const envPath of candidateEnvPaths) {
 }
 
 if (!loadedEnvPath) {
-  // Fallback default dotenv
   dotenv.config();
 }
 
@@ -31,6 +30,7 @@ const user = process.env.EMAIL_USER || process.env.SMTP_USER || '';
 const pass = process.env.EMAIL_PASSWORD || process.env.SMTP_PASSWORD || '';
 const from = process.env.EMAIL_FROM || process.env.SMTP_FROM || '';
 const secureStr = process.env.EMAIL_SECURE || process.env.SMTP_SECURE || '';
+const resendKey = process.env.RESEND_API_KEY || '';
 
 const port = parseInt(portStr, 10);
 const secure = secureStr ? secureStr.toLowerCase() === 'true' : port === 465;
@@ -46,11 +46,14 @@ export const config = {
   // Loaded .env file path
   loadedEnvPath: loadedEnvPath || 'default cwd .env',
 
+  // Resend API Key (Transactional Email API)
+  resendApiKey: resendKey.trim(),
+
   // Email / SMTP Configuration
   emailHost: host.trim(),
   emailPort: port,
   emailSecure: secure,
   emailUser: user.trim(),
-  emailPassword: pass.replace(/\s+/g, ''), // Strip spaces from Gmail App Passwords
-  emailFrom: from.trim() || (user.trim() ? `"NEXUS OPERA" <${user.trim()}>` : ''),
+  emailPassword: pass.replace(/\s+/g, ''), // Strip spaces from App Passwords
+  emailFrom: from.trim() || (user.trim() ? `"NEXUS OPERA" <${user.trim()}>` : 'NEXUS OPERA <onboarding@resend.dev>'),
 };
