@@ -1,8 +1,43 @@
 # NEXUS OPERA | Wholesale ERP & CRM Operations Portal
 
-> **Enterprise Operations Management System for Wholesale & Distribution**
+> **Cross-Platform Enterprise Operations Management System (macOS, Windows, Linux, iOS, Android)**
 
 NEXUS OPERA is a full-stack, production-ready ERP + CRM Operations Portal engineered for wholesale and distribution companies. It unifies customer relationship management, product catalogs, warehouse stock tracking, transactional inventory deductions, and sales challan fulfillment with strict database role security (RBAC).
+
+---
+
+## 🍏 macOS & Multi-Platform Compatibility
+
+NEXUS OPERA is fully optimized for **macOS (MacBook, Mac mini, iMac), iOS (iPhone, iPad), Windows, and Linux**:
+
+### 1. Accessing from Mac / iPhone / iPad on Wi-Fi/LAN (Instant Access)
+Any Mac or iOS device on the same Wi-Fi network can open Safari or Chrome and navigate directly to:
+👉 **`http://10.44.3.65:5000/`** (or your server's LAN IP address)
+
+### 2. Running Locally on macOS (Native Node.js & PostgreSQL)
+```bash
+# Clone or download repository on Mac Terminal
+cd NEXUS-OPERA/backend
+npm install
+npm run db:seed    # Initializes PostgreSQL schema & seeds test accounts
+npm run build
+
+cd ../frontend
+npm install
+npm run build
+
+# Start Unified Server on macOS
+cd ../backend
+npm start
+```
+The application will automatically detect macOS POSIX file paths and listen on `0.0.0.0:5000`.
+
+### 3. Running via Docker on macOS (1-Command Docker Setup)
+For Mac users with Docker Desktop installed (Apple Silicon M1/M2/M3 & Intel Macs):
+```bash
+docker compose up --build
+```
+This automatically provisions PostgreSQL 16 and the unified NEXUS OPERA app container on port `5000`.
 
 ---
 
@@ -12,10 +47,10 @@ All test accounts exist pre-seeded in the database with secure bcrypt password h
 
 | Role | Email Address | Test Password | Access Level |
 | :--- | :--- | :--- | :--- |
-| **ADMIN** | `admin@nexusopera.com` | `nexusAdmin123!` | Complete System Management & Controls |
+| **ADMIN** | `admin@nexusopera.com` | `nexusAdmin123!` | Complete System Management & Control |
 | **SALES** | `sales@nexusopera.com` | `nexusSales123!` | Customers CRM & Sales Challans |
 | **WAREHOUSE** | `warehouse@nexusopera.com` | `nexusWarehouse123!` | Stock Inventory & Adjustments |
-| **ACCOUNTS** | `accounts@nexusopera.com` | `nexusAccounts123!` | Customer & Challan Financial Summaries |
+| **ACCOUNTS** | `accounts@nexusopera.com` | `nexusAccounts123!` | Financial & Challan Read-Only Views |
 
 ---
 
@@ -57,5 +92,5 @@ All test accounts exist pre-seeded in the database with secure bcrypt password h
    npm start
    ```
 4. Access the unified portal at:
-   - **Local Laptop**: [http://localhost:5000/](http://localhost:5000/)
-   - **Network LAN Devices**: `http://10.44.3.65:5000/`
+   - **Local Machine**: [http://localhost:5000/](http://localhost:5000/)
+   - **Network LAN Devices (Mac, PC, Mobile)**: `http://10.44.3.65:5000/`
