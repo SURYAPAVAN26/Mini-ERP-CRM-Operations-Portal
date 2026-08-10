@@ -4,29 +4,43 @@ import { AppError } from '../middleware/errorHandler';
 
 let transporter: nodemailer.Transporter | null = null;
 
-// Get safe configuration status for each environment variable
+// Get safe configuration status for each environment variable (NO PASSWORDS PRINTED)
 export function getSmtpConfigStatus() {
+  const hostExists = Boolean(config.emailHost);
+  const portExists = Boolean(config.emailPort);
+  const secureExists = Boolean(config.emailSecure !== undefined);
+  const userExists = Boolean(config.emailUser);
+  const passExists = Boolean(config.emailPassword);
+  const fromExists = Boolean(config.emailFrom);
+
   return {
-    EMAIL_HOST: config.emailHost ? `configured (${config.emailHost})` : 'NOT CONFIGURED',
-    EMAIL_PORT: `configured (${config.emailPort})`,
-    EMAIL_SECURE: `configured (${config.emailSecure})`,
-    EMAIL_USER: config.emailUser ? 'configured' : 'NOT CONFIGURED (empty in backend/.env)',
-    EMAIL_PASSWORD: config.emailPassword ? 'configured' : 'NOT CONFIGURED (empty in backend/.env)',
-    EMAIL_FROM: config.emailFrom ? `configured (${config.emailFrom})` : 'NOT CONFIGURED',
+    workingDirectory: process.cwd(),
+    loadedEnvFile: config.loadedEnvPath,
+    EMAIL_HOST_exists: hostExists,
+    EMAIL_HOST_val: config.emailHost || 'NOT SET',
+    EMAIL_PORT_exists: portExists,
+    EMAIL_PORT_val: config.emailPort,
+    EMAIL_SECURE_exists: secureExists,
+    EMAIL_SECURE_val: config.emailSecure,
+    EMAIL_USER_exists: userExists,
+    EMAIL_PASSWORD_exists: passExists,
+    EMAIL_FROM_exists: fromExists,
   };
 }
 
 // Print safe configuration summary to terminal (NO PASSWORDS)
 export function printSafeConfigSummary(): void {
   const status = getSmtpConfigStatus();
-  console.log('=============== SMTP CONFIGURATION CHECK ===============');
-  console.log(`EMAIL_HOST:     ${status.EMAIL_HOST}`);
-  console.log(`EMAIL_PORT:     ${status.EMAIL_PORT}`);
-  console.log(`EMAIL_SECURE:   ${status.EMAIL_SECURE}`);
-  console.log(`EMAIL_USER:     ${status.EMAIL_USER}`);
-  console.log(`EMAIL_PASSWORD: ${status.EMAIL_PASSWORD}`);
-  console.log(`EMAIL_FROM:     ${status.EMAIL_FROM}`);
-  console.log('========================================================');
+  console.log('=============== BACKEND DIAGNOSTIC SUMMARY ===============');
+  console.log(`Backend Working Directory: ${status.workingDirectory}`);
+  console.log(`Loaded .env File Path:     ${status.loadedEnvFile}`);
+  console.log(`EMAIL_HOST exists:         ${status.EMAIL_HOST_exists} (${status.EMAIL_HOST_val})`);
+  console.log(`EMAIL_PORT exists:         ${status.EMAIL_PORT_exists} (${status.EMAIL_PORT_val})`);
+  console.log(`EMAIL_SECURE exists:       ${status.EMAIL_SECURE_exists} (${status.EMAIL_SECURE_val})`);
+  console.log(`EMAIL_USER exists:         ${status.EMAIL_USER_exists}`);
+  console.log(`EMAIL_PASSWORD exists:     ${status.EMAIL_PASSWORD_exists}`);
+  console.log(`EMAIL_FROM exists:         ${status.EMAIL_FROM_exists}`);
+  console.log('==========================================================');
 }
 
 export function getTransporter(): nodemailer.Transporter {
@@ -36,7 +50,7 @@ export function getTransporter(): nodemailer.Transporter {
 
   if (!config.emailHost || !config.emailUser || !config.emailPassword) {
     throw new AppError(
-      'SMTP credentials are not configured. Please enter EMAIL_USER and EMAIL_PASSWORD in backend/.env file.',
+      'SMTP credentials are not configured in backend/.env. Please enter EMAIL_USER and EMAIL_PASSWORD in backend/.env file.',
       500,
       'SMTP_NOT_CONFIGURED'
     );
@@ -51,7 +65,7 @@ export function getTransporter(): nodemailer.Transporter {
       pass: config.emailPassword,
     },
     tls: {
-      rejectUnauthorized: false, // Prevents local TLS certificate errors
+      rejectUnauthorized: false,
     },
   });
 
@@ -71,7 +85,7 @@ export async function verifySmtpConnection(): Promise<{
     return {
       success: false,
       status: 'AWAITING_CREDENTIALS',
-      message: 'SMTP credentials missing in backend/.env. Please enter EMAIL_USER and EMAIL_PASSWORD in backend/.env',
+      message: 'SMTP credentials are not configured in backend/.env. Enter EMAIL_USER and EMAIL_PASSWORD in backend/.env',
       configStatus: status,
     };
   }
@@ -151,10 +165,8 @@ export async function sendOtpEmail(toEmail: string, userName: string, otpCode: s
   };
 
   try {
-    // 2. Dispatch email via Nodemailer
     const info = await mailTransporter.sendMail(mailOptions);
 
-    // 3. Inspect provider response
     const acceptedList = Array.isArray(info.accepted) ? info.accepted : [];
     const rejectedList = Array.isArray(info.rejected) ? info.rejected : [];
 

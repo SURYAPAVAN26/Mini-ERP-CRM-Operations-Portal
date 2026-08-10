@@ -1,9 +1,29 @@
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 
-// Force load backend/.env file
-const envPath = path.resolve(__dirname, '../../.env');
-dotenv.config({ path: envPath });
+// Check all possible .env locations fail-safely
+const candidateEnvPaths = [
+  path.resolve(process.cwd(), '.env'),
+  path.resolve(process.cwd(), 'backend/.env'),
+  path.resolve(__dirname, '../../.env'),
+  path.resolve(__dirname, '../.env'),
+];
+
+let loadedEnvPath = '';
+
+for (const envPath of candidateEnvPaths) {
+  if (fs.existsSync(envPath)) {
+    dotenv.config({ path: envPath });
+    loadedEnvPath = envPath;
+    break;
+  }
+}
+
+if (!loadedEnvPath) {
+  // Fallback default dotenv
+  dotenv.config();
+}
 
 const host = process.env.EMAIL_HOST || process.env.SMTP_HOST || '';
 const portStr = process.env.EMAIL_PORT || process.env.SMTP_PORT || '587';
@@ -13,7 +33,6 @@ const from = process.env.EMAIL_FROM || process.env.SMTP_FROM || '';
 const secureStr = process.env.EMAIL_SECURE || process.env.SMTP_SECURE || '';
 
 const port = parseInt(portStr, 10);
-// Default secure=true for 465, false for 587
 const secure = secureStr ? secureStr.toLowerCase() === 'true' : port === 465;
 
 export const config = {
@@ -24,6 +43,9 @@ export const config = {
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
   nodeEnv: process.env.NODE_ENV || 'development',
   
+  // Loaded .env file path
+  loadedEnvPath: loadedEnvPath || 'default cwd .env',
+
   // Email / SMTP Configuration
   emailHost: host.trim(),
   emailPort: port,
