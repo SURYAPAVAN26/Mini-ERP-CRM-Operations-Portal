@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "Mini ERP + CRM Operations Portal API Collection",
-    "description": "Complete REST API collection for Mini ERP + CRM Operations Portal including Auth, Customer CRM, Products Catalog, Inventory Stock Adjustments, Sales Challans, and Dashboard.",
+    "name": "NEXUS OPERA | ERP + CRM Operations Portal API Collection",
+    "description": "Complete REST API collection for NEXUS OPERA Wholesale ERP + CRM System including Auth, Customer CRM, Products Catalog, Inventory Stock Adjustments, Sales Challans, and Dashboard.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -27,7 +27,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"admin@company.com\",\n  \"password\": \"admin123\"\n}"
+              "raw": "{\n  \"email\": \"admin@nexusopera.com\",\n  \"password\": \"nexusAdmin123!\"\n}"
             },
             "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
           }
@@ -39,7 +39,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"sales@company.com\",\n  \"password\": \"sales123\"\n}"
+              "raw": "{\n  \"email\": \"sales@nexusopera.com\",\n  \"password\": \"nexusSales123!\"\n}"
             },
             "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
           }
@@ -51,7 +51,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"warehouse@company.com\",\n  \"password\": \"warehouse123\"\n}"
+              "raw": "{\n  \"email\": \"warehouse@nexusopera.com\",\n  \"password\": \"nexusWarehouse123!\"\n}"
             },
             "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
           }
@@ -63,7 +63,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"accounts@company.com\",\n  \"password\": \"accounts123\"\n}"
+              "raw": "{\n  \"email\": \"accounts@nexusopera.com\",\n  \"password\": \"nexusAccounts123!\"\n}"
             },
             "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
           }
@@ -103,29 +103,6 @@
             },
             "url": { "raw": "{{baseUrl}}/customers", "host": ["{{baseUrl}}"], "path": ["customers"] }
           }
-        },
-        {
-          "name": "Get Customer Details by ID",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/customers/:id", "host": ["{{baseUrl}}"], "path": ["customers", ":id"] }
-          }
-        },
-        {
-          "name": "Add Follow-Up Note",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"notes\": \"Spoke with purchase manager regarding quarterly discount structure.\",\n  \"follow_up_date\": \"2026-09-01\",\n  \"status\": \"Active\"\n}"
-            },
-            "url": { "raw": "{{baseUrl}}/customers/:id/notes", "host": ["{{baseUrl}}"], "path": ["customers", ":id", "notes"] }
-          }
         }
       ]
     },
@@ -133,119 +110,24 @@
       "name": "3. Products & Catalog",
       "item": [
         {
-          "name": "List Products (Search & Low Stock)",
+          "name": "List Products",
           "request": {
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/products?low_stock=true", "host": ["{{baseUrl}}"], "path": ["products"], "query": [{"key":"low_stock","value":"true"}] }
-          }
-        },
-        {
-          "name": "Create Product",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Sony Noise Cancelling Headphones\",\n  \"sku\": \"AUD-SON-WH1000\",\n  \"category\": \"Audio\",\n  \"unit_price\": 24990.00,\n  \"current_stock\": 15,\n  \"min_stock_alert\": 5,\n  \"location\": \"Warehouse A - Bay 4\"\n}"
-            },
             "url": { "raw": "{{baseUrl}}/products", "host": ["{{baseUrl}}"], "path": ["products"] }
           }
         }
       ]
     },
     {
-      "name": "4. Inventory & Movements",
+      "name": "4. Sales Challans",
       "item": [
-        {
-          "name": "Get Inventory Overview & Stats",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/inventory", "host": ["{{baseUrl}}"], "path": ["inventory"] }
-          }
-        },
-        {
-          "name": "Get Stock Movement Audit Logs",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/inventory/movements?page=1&limit=20", "host": ["{{baseUrl}}"], "path": ["inventory", "movements"] }
-          }
-        },
-        {
-          "name": "Manual Stock Adjustment (IN/OUT)",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"product_id\": \"<PRODUCT_UUID>\",\n  \"quantity\": 10,\n  \"movement_type\": \"IN\",\n  \"reason\": \"Factory direct shipment received\"\n}"
-            },
-            "url": { "raw": "{{baseUrl}}/inventory/adjust", "host": ["{{baseUrl}}"], "path": ["inventory", "adjust"] }
-          }
-        }
-      ]
-    },
-    {
-      "name": "5. Sales Challans",
-      "item": [
-        {
-          "name": "List Sales Challans",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/challans", "host": ["{{baseUrl}}"], "path": ["challans"] }
-          }
-        },
-        {
-          "name": "Create Sales Challan (DRAFT)",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"customer_id\": \"<CUSTOMER_UUID>\",\n  \"items\": [\n    {\n      \"product_id\": \"<PRODUCT_UUID>\",\n      \"quantity\": 2\n    }\n  ]\n}"
-            },
-            "url": { "raw": "{{baseUrl}}/challans", "host": ["{{baseUrl}}"], "path": ["challans"] }
-          }
-        },
         {
           "name": "Confirm Sales Challan (Transactional Stock Deduction)",
           "request": {
             "method": "POST",
             "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
             "url": { "raw": "{{baseUrl}}/challans/:id/confirm", "host": ["{{baseUrl}}"], "path": ["challans", ":id", "confirm"] }
-          }
-        },
-        {
-          "name": "Cancel Sales Challan",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/challans/:id/cancel", "host": ["{{baseUrl}}"], "path": ["challans", ":id", "cancel"] }
-          }
-        }
-      ]
-    },
-    {
-      "name": "6. Dashboard",
-      "item": [
-        {
-          "name": "Get Dashboard Operational Metrics",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/dashboard", "host": ["{{baseUrl}}"], "path": ["dashboard"] }
           }
         }
       ]

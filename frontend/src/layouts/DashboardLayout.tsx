@@ -96,7 +96,7 @@ export const DashboardLayout: React.FC = () => {
         <div className="sidebar-header">
           <div className="sidebar-brand">
             <Shield size={26} color="#6366f1" />
-            <span>OPUS ERP</span>
+            <span>NEXUS OPERA</span>
           </div>
           <button className="btn btn-sm btn-secondary d-md-none" onClick={() => setSidebarOpen(false)}>
             <X size={16} />

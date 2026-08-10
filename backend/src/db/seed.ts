@@ -7,11 +7,11 @@ export async function seedDb() {
   console.log('Seeding initial database data...');
 
   try {
-    // 1. Create Test Users
-    const passwordHashAdmin = await bcrypt.hash('admin123', 10);
-    const passwordHashSales = await bcrypt.hash('sales123', 10);
-    const passwordHashWarehouse = await bcrypt.hash('warehouse123', 10);
-    const passwordHashAccounts = await bcrypt.hash('accounts123', 10);
+    // 1. Create Professional Test Users
+    const passwordHashAdmin = await bcrypt.hash('nexusAdmin123!', 10);
+    const passwordHashSales = await bcrypt.hash('nexusSales123!', 10);
+    const passwordHashWarehouse = await bcrypt.hash('nexusWarehouse123!', 10);
+    const passwordHashAccounts = await bcrypt.hash('nexusAccounts123!', 10);
 
     const userRes = await pool.query(
       `INSERT INTO users (name, email, password_hash, role) VALUES
@@ -21,10 +21,10 @@ export async function seedDb() {
       ($13, $14, $15, $16)
       RETURNING id, name, role;`,
       [
-        'System Admin', 'admin@company.com', passwordHashAdmin, 'ADMIN',
-        'Sarah Sales', 'sales@company.com', passwordHashSales, 'SALES',
-        'Wally Warehouse', 'warehouse@company.com', passwordHashWarehouse, 'WAREHOUSE',
-        'Alice Accounts', 'accounts@company.com', passwordHashAccounts, 'ACCOUNTS',
+        'System Admin', 'admin@nexusopera.com', passwordHashAdmin, 'ADMIN',
+        'Sarah Sales', 'sales@nexusopera.com', passwordHashSales, 'SALES',
+        'Wally Warehouse', 'warehouse@nexusopera.com', passwordHashWarehouse, 'WAREHOUSE',
+        'Alice Accounts', 'accounts@nexusopera.com', passwordHashAccounts, 'ACCOUNTS',
       ]
     );
 
@@ -32,7 +32,7 @@ export async function seedDb() {
     const salesId = userRes.rows.find((u) => u.role === 'SALES')?.id;
     const warehouseId = userRes.rows.find((u) => u.role === 'WAREHOUSE')?.id;
 
-    console.log('Test users created.');
+    console.log('Professional test users created.');
 
     // 2. Create Sample Customers
     const customerRes = await pool.query(
@@ -79,7 +79,6 @@ export async function seedDb() {
     console.log('Initial stock movements logged.');
 
     // 5. Create Initial Sales Challans
-    // Challan 1: DRAFT
     const challanDraftRes = await pool.query(
       `INSERT INTO sales_challans (challan_number, customer_id, total_quantity, total_amount, status, created_by)
       VALUES ('CH-2026-0001', $1, 3, 44490.00, 'DRAFT', $2)
@@ -96,7 +95,6 @@ export async function seedDb() {
       [draftChallanId, prodMouse, prodMonitor, prodKeyboard]
     );
 
-    // Challan 2: CONFIRMED (already confirmed, so stock reduced previously)
     const challanConfRes = await pool.query(
       `INSERT INTO sales_challans (challan_number, customer_id, total_quantity, total_amount, status, created_by)
       VALUES ('CH-2026-0002', $1, 5, 92500.00, 'CONFIRMED', $2)

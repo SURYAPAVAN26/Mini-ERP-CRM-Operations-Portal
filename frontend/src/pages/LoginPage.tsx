@@ -1,21 +1,21 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, Lock, Mail, ArrowRight, CheckCircle } from 'lucide-react';
+import { Shield, Lock, Mail, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const testAccounts = [
-  { role: 'ADMIN', label: 'System Admin', email: 'admin@company.com', pass: 'admin123', desc: 'Full access to all portal modules' },
-  { role: 'SALES', label: 'Sales Rep', email: 'sales@company.com', pass: 'sales123', desc: 'Manage CRM customers & generate Sales Challans' },
-  { role: 'WAREHOUSE', label: 'Warehouse Manager', email: 'warehouse@company.com', pass: 'warehouse123', desc: 'Manage product stock & movement logs' },
-  { role: 'ACCOUNTS', label: 'Accounts Officer', email: 'accounts@company.com', pass: 'accounts123', desc: 'View customer details & confirmed challans' },
+  { role: 'ADMIN', label: 'System Admin', email: 'admin@nexusopera.com', pass: 'nexusAdmin123!', desc: 'Full system management' },
+  { role: 'SALES', label: 'Sales Executive', email: 'sales@nexusopera.com', pass: 'nexusSales123!', desc: 'Manage CRM & Sales Challans' },
+  { role: 'WAREHOUSE', label: 'Warehouse Manager', email: 'warehouse@nexusopera.com', pass: 'nexusWarehouse123!', desc: 'Stock inventory & Movements' },
+  { role: 'ACCOUNTS', label: 'Accounts Officer', email: 'accounts@nexusopera.com', pass: 'nexusAccounts123!', desc: 'Financial summaries & Challans' },
 ];
 
 export const LoginPage: React.FC = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState('admin@company.com');
-  const [password, setPassword] = useState('admin123');
+  const [email, setEmail] = useState('admin@nexusopera.com');
+  const [password, setPassword] = useState('nexusAdmin123!');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -28,7 +28,7 @@ export const LoginPage: React.FC = () => {
       await login(email, password);
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to authenticate. Please check credentials.');
+      setError(err.response?.data?.message || 'Invalid email or password');
     } finally {
       setLoading(false);
     }
@@ -56,7 +56,7 @@ export const LoginPage: React.FC = () => {
         gap: '30px',
         alignItems: 'center'
       }}>
-        {/* Left Welcome Panel */}
+        {/* Left Branding Panel */}
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
             <div style={{ background: 'rgba(99, 102, 241, 0.2)', padding: '12px', borderRadius: '16px', border: '1px solid rgba(99, 102, 241, 0.4)' }}>
@@ -64,19 +64,19 @@ export const LoginPage: React.FC = () => {
             </div>
             <div>
               <h1 style={{ fontSize: '2rem', background: 'linear-gradient(135deg, #818cf8 0%, #38bdf8 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                OPUS ERP + CRM
+                NEXUS OPERA
               </h1>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Enterprise Distribution & Operations Portal</p>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Enterprise Wholesale ERP & CRM Operations</p>
             </div>
           </div>
 
           <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', marginBottom: '24px', lineHeight: 1.6 }}>
-            Streamline customer follow-ups, product cataloging, transactional inventory stock deduction, and sales challans with role-enforced access control.
+            Unified wholesale operations, customer CRM follow-ups, inventory stock deduction, and sales challan fulfillment with strict database role security.
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <h4 style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Select Test Credentials:
+              Registered Employee Role Quick-Select:
             </h4>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
               {testAccounts.map((acc) => (
@@ -108,9 +108,9 @@ export const LoginPage: React.FC = () => {
 
         {/* Right Login Card */}
         <div className="card card-glass" style={{ padding: '36px' }}>
-          <h2 style={{ fontSize: '1.4rem', marginBottom: '6px' }}>Portal Sign In</h2>
+          <h2 style={{ fontSize: '1.4rem', marginBottom: '6px' }}>Employee Portal Sign In</h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '24px' }}>
-            Enter your employee credentials to access your dashboard
+            Sign in with registered system credentials to access your dashboard
           </p>
 
           {error && (
@@ -121,14 +121,14 @@ export const LoginPage: React.FC = () => {
 
           <form onSubmit={handleSubmit}>
             <div className="form-group">
-              <label>Employee Email</label>
+              <label>Registered Email</label>
               <div style={{ position: 'relative' }}>
                 <Mail size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                 <input
                   type="email"
                   className="form-control"
                   style={{ paddingLeft: '40px' }}
-                  placeholder="name@company.com"
+                  placeholder="admin@nexusopera.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -163,7 +163,7 @@ export const LoginPage: React.FC = () => {
           </form>
 
           <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--border-color)', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>
-            JWT Authenticated • Role Authorization Enforced
+            Database User Verification • Role Access Enforced
           </div>
         </div>
       </div>
