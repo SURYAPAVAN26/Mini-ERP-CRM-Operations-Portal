@@ -2,6 +2,7 @@ import os from 'os';
 import app from './app';
 import { config } from './config/env';
 import { pool } from './config/database';
+import { verifySmtpConnection } from './services/emailService';
 
 const PORT = config.port;
 
@@ -18,9 +19,16 @@ function getNetworkIp(): string {
 }
 
 pool.query('SELECT NOW()')
-  .then(() => {
+  .then(async () => {
     const networkIp = getNetworkIp();
     console.log('PostgreSQL database connection established successfully.');
+    
+    if (config.emailHost && config.emailUser) {
+      await verifySmtpConnection();
+    } else {
+      console.log('ℹ️ SMTP Email Service: Not configured in .env (Set EMAIL_HOST, EMAIL_USER, EMAIL_PASSWORD in .env)');
+    }
+
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Mini ERP + CRM Server running on port ${PORT}`);
       console.log(`🌐 Local Access:    http://localhost:${PORT}/`);

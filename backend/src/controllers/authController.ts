@@ -115,7 +115,7 @@ export const register = async (req: Request, res: Response, next: NextFunction):
         );
 
         // Send OTP via Nodemailer
-        await sendOtpEmail(email, otpCode);
+        await sendOtpEmail(email, name, otpCode);
 
         res.status(200).json({
           success: true,
@@ -137,7 +137,7 @@ export const register = async (req: Request, res: Response, next: NextFunction):
     );
 
     // Send OTP via Nodemailer
-    await sendOtpEmail(email, otpCode);
+    await sendOtpEmail(email, name, otpCode);
 
     res.status(201).json({
       success: true,
@@ -230,7 +230,7 @@ export const resendOtp = async (req: Request, res: Response, next: NextFunction)
     const { email } = req.body;
 
     const userRes = await query(
-      'SELECT id, is_email_verified, otp_expires_at FROM users WHERE email = $1',
+      'SELECT id, name, is_email_verified, otp_expires_at FROM users WHERE email = $1',
       [email]
     );
 
@@ -269,7 +269,7 @@ export const resendOtp = async (req: Request, res: Response, next: NextFunction)
     );
 
     // Send OTP via Nodemailer
-    await sendOtpEmail(email, newOtp);
+    await sendOtpEmail(email, user.name || 'User', newOtp);
 
     res.json({
       success: true,
