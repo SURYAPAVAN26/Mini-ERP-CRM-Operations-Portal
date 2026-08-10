@@ -129,19 +129,7 @@ export const RegisterPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="form-group">
-              <label>Select Testing Role *</label>
-              <select
-                className="form-select"
-                value={role}
-                onChange={(e) => setRole(e.target.value as any)}
-              >
-                <option value="SALES">Sales Executive (CRM & Challans)</option>
-                <option value="ADMIN">System Admin (Full Access)</option>
-                <option value="WAREHOUSE">Warehouse Manager (Stock & Catalog)</option>
-                <option value="ACCOUNTS">Accounts Officer (Financial Reports)</option>
-              </select>
-            </div>
+            {/* Role defaults to SALES for public registration */}
 
             <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '12px', padding: '12px', fontSize: '0.95rem' }} disabled={loading}>
               {loading ? 'Registering Account...' : (

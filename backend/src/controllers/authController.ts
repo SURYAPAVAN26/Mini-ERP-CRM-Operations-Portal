@@ -93,56 +93,62 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
   }
 };
 
-// 2. REGISTER (Creates account & sends OTP via email)
+// 2. REGISTER (Creates account & sends OTP to dynamic recipient email)
 export const register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email } = req.body;
+    const recipientEmail = String(email).trim();
+    const userPassword = req.body.password;
 
-    const existingUser = await query('SELECT id, is_email_verified FROM users WHERE email = $1', [email]);
+    // SECURITY: Public registration defaults to safe 'SALES' role
+    // Privileged roles (ADMIN, WAREHOUSE, ACCOUNTS) cannot be self-assigned
+    const safeRole = 'SALES';
+
+    const existingUser = await query('SELECT id, is_email_verified FROM users WHERE email = $1', [recipientEmail]);
     if (existingUser.rows.length > 0) {
       if (existingUser.rows[0].is_email_verified) {
         throw new AppError('This email is already registered. Please sign in.', 400, 'USER_ALREADY_EXISTS');
       } else {
-        // Unverified account exists: allow updating password and re-sending OTP
-        const password_hash = await bcrypt.hash(password, 10);
+        // Unverified account exists: allow updating password and re-sending OTP to dynamic recipient email
+        const password_hash = await bcrypt.hash(userPassword, 10);
         const otpCode = generate6DigitOtp();
         const otpHash = await bcrypt.hash(otpCode, 10);
 
         await query(
           `UPDATE users SET name = $1, password_hash = $2, role = $3, otp_code = $4, otp_expires_at = NOW() + INTERVAL '5 minutes', updated_at = NOW()
            WHERE email = $5`,
-          [name, password_hash, role || 'SALES', otpHash, email]
+          [name, password_hash, safeRole, otpHash, recipientEmail]
         );
 
-        // Send OTP via Nodemailer
-        await sendOtpEmail(email, name, otpCode);
+        // Send OTP to dynamic recipient email entered by the user
+        await sendOtpEmail(recipientEmail, name, otpCode);
 
         res.status(200).json({
           success: true,
           message: 'OTP has been sent to your email.',
-          data: { email },
+          data: { email: recipientEmail },
         });
         return;
       }
     }
 
-    const password_hash = await bcrypt.hash(password, 10);
+    const password_hash = await bcrypt.hash(userPassword, 10);
     const otpCode = generate6DigitOtp();
     const otpHash = await bcrypt.hash(otpCode, 10);
 
     await query(
       `INSERT INTO users (name, email, password_hash, role, is_email_verified, otp_code, otp_expires_at)
        VALUES ($1, $2, $3, $4, FALSE, $5, NOW() + INTERVAL '5 minutes')`,
-      [name, email, password_hash, role || 'SALES', otpHash]
+      [name, recipientEmail, password_hash, safeRole, otpHash]
     );
 
-    // Send OTP via Nodemailer
-    await sendOtpEmail(email, name, otpCode);
+    // Send OTP to dynamic recipient email entered by the user
+    await sendOtpEmail(recipientEmail, name, otpCode);
 
     res.status(201).json({
       success: true,
       message: 'OTP has been sent to your email.',
-      data: { email },
+      data: { email: recipientEmail },
     });
   } catch (error) {
     next(error);
