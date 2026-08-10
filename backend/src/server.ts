@@ -1,8 +1,14 @@
+import dotenv from 'dotenv';
+import path from 'path';
+
+// Force load backend/.env before importing any modules
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
 import os from 'os';
 import app from './app';
 import { config } from './config/env';
 import { pool } from './config/database';
-import { verifySmtpConnection } from './services/emailService';
+import { printSafeConfigSummary } from './services/emailService';
 
 const PORT = config.port;
 
@@ -23,11 +29,8 @@ pool.query('SELECT NOW()')
     const networkIp = getNetworkIp();
     console.log('PostgreSQL database connection established successfully.');
     
-    if (config.emailHost && config.emailUser) {
-      await verifySmtpConnection();
-    } else {
-      console.log('ℹ️ SMTP Email Service: Not configured in .env (Set EMAIL_HOST, EMAIL_USER, EMAIL_PASSWORD in .env)');
-    }
+    // Print safe SMTP configuration check summary on startup
+    printSafeConfigSummary();
 
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Mini ERP + CRM Server running on port ${PORT}`);

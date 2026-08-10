@@ -1,5 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { getTransporter, verifySmtpConnection, sendSimpleTestEmail } from '../services/emailService';
+import { getTransporter, verifySmtpConnection, sendOtpEmail } from '../services/emailService';
 import { config } from '../config/env';
 import { AppError } from '../middleware/errorHandler';
 
@@ -17,29 +17,22 @@ router.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-// GET /api/dev/verify-smtp - Test SMTP connection & credentials
+// GET /api/dev/verify-smtp - Test SMTP connection & report variable configuration status
 router.get('/verify-smtp', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const result = await verifySmtpConnection();
     res.json({
       success: result.success,
-      smtpConnection: result.success ? 'PASS' : 'FAIL',
+      status: result.status,
       message: result.message,
-      config: {
-        host: config.emailHost || 'NOT CONFIGURED',
-        port: config.emailPort,
-        secure: config.emailSecure,
-        userConfigured: !!config.emailUser,
-        passConfigured: !!config.emailPassword,
-        from: config.emailFrom || 'NOT CONFIGURED',
-      },
+      configStatus: result.configStatus,
     });
   } catch (error) {
     next(error);
   }
 });
 
-// POST /api/dev/test-email - Send a test email to specified test address (e.g. 2303031460082@paruluniversity.ac.in)
+// POST /api/dev/test-email - Send a test email to specified test address
 router.post('/test-email', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email } = req.body;
@@ -50,8 +43,8 @@ router.post('/test-email', async (req: Request, res: Response, next: NextFunctio
 
     const targetEmail = String(email).trim();
 
-    // Send simple test email without OTP
-    const info = await sendSimpleTestEmail(targetEmail);
+    // Send test email
+    const info = await sendOtpEmail(targetEmail, 'Test User', '123456');
 
     const acceptedList = Array.isArray(info.accepted) ? info.accepted : [];
     const rejectedList = Array.isArray(info.rejected) ? info.rejected : [];

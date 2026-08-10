@@ -4,15 +4,39 @@ import { AppError } from '../middleware/errorHandler';
 
 let transporter: nodemailer.Transporter | null = null;
 
+// Get safe configuration status for each environment variable
+export function getSmtpConfigStatus() {
+  return {
+    EMAIL_HOST: config.emailHost ? `configured (${config.emailHost})` : 'NOT CONFIGURED',
+    EMAIL_PORT: `configured (${config.emailPort})`,
+    EMAIL_SECURE: `configured (${config.emailSecure})`,
+    EMAIL_USER: config.emailUser ? 'configured' : 'NOT CONFIGURED (empty in backend/.env)',
+    EMAIL_PASSWORD: config.emailPassword ? 'configured' : 'NOT CONFIGURED (empty in backend/.env)',
+    EMAIL_FROM: config.emailFrom ? `configured (${config.emailFrom})` : 'NOT CONFIGURED',
+  };
+}
+
+// Print safe configuration summary to terminal (NO PASSWORDS)
+export function printSafeConfigSummary(): void {
+  const status = getSmtpConfigStatus();
+  console.log('=============== SMTP CONFIGURATION CHECK ===============');
+  console.log(`EMAIL_HOST:     ${status.EMAIL_HOST}`);
+  console.log(`EMAIL_PORT:     ${status.EMAIL_PORT}`);
+  console.log(`EMAIL_SECURE:   ${status.EMAIL_SECURE}`);
+  console.log(`EMAIL_USER:     ${status.EMAIL_USER}`);
+  console.log(`EMAIL_PASSWORD: ${status.EMAIL_PASSWORD}`);
+  console.log(`EMAIL_FROM:     ${status.EMAIL_FROM}`);
+  console.log('========================================================');
+}
+
 export function getTransporter(): nodemailer.Transporter {
   if (transporter) {
     return transporter;
   }
 
-  // Strictly require real SMTP credentials
   if (!config.emailHost || !config.emailUser || !config.emailPassword) {
     throw new AppError(
-      'SMTP Email service is not configured in backend/.env. Please set EMAIL_HOST, EMAIL_PORT, EMAIL_USER, and EMAIL_PASSWORD in .env file.',
+      'SMTP credentials missing in backend/.env. Please enter EMAIL_USER and EMAIL_PASSWORD in backend/.env to send real emails.',
       500,
       'SMTP_NOT_CONFIGURED'
     );
@@ -21,94 +45,65 @@ export function getTransporter(): nodemailer.Transporter {
   transporter = nodemailer.createTransport({
     host: config.emailHost,
     port: config.emailPort,
-    secure: config.emailSecure, // true for 465 (SSL), false for 587 (STARTTLS)
+    secure: config.emailSecure, // true for 465, false for 587
     auth: {
       user: config.emailUser,
       pass: config.emailPassword,
     },
     tls: {
-      rejectUnauthorized: false, // Prevents local TLS certificate handshake errors
+      rejectUnauthorized: false, // Prevents local TLS certificate errors
     },
   });
 
   return transporter;
 }
 
-// Log safe configuration summary without exposing passwords
-export function printSafeConfigSummary(): void {
-  console.log('=============== SMTP CONFIG SUMMARY ===============');
-  console.log(`EMAIL_HOST:     ${config.emailHost ? config.emailHost : 'NOT CONFIGURED'}`);
-  console.log(`EMAIL_PORT:     ${config.emailPort}`);
-  console.log(`EMAIL_SECURE:   ${config.emailSecure}`);
-  console.log(`EMAIL_USER:     ${config.emailUser ? `configured (${config.emailUser})` : 'NOT CONFIGURED'}`);
-  console.log(`EMAIL_PASSWORD: ${config.emailPassword ? 'configured' : 'NOT CONFIGURED'}`);
-  console.log(`EMAIL_FROM:     ${config.emailFrom ? config.emailFrom : 'NOT CONFIGURED'}`);
-  console.log('===================================================');
-}
+// Development-safe SMTP connection test
+export async function verifySmtpConnection(): Promise<{
+  success: boolean;
+  status: string;
+  message: string;
+  configStatus: ReturnType<typeof getSmtpConfigStatus>;
+}> {
+  const status = getSmtpConfigStatus();
 
-// Verify SMTP connection using transporter.verify()
-export async function verifySmtpConnection(): Promise<{ success: boolean; message: string }> {
-  printSafeConfigSummary();
+  if (!config.emailHost || !config.emailUser || !config.emailPassword) {
+    return {
+      success: false,
+      status: 'AWAITING_CREDENTIALS',
+      message: 'SMTP credentials missing in backend/.env. Please enter EMAIL_USER and EMAIL_PASSWORD in backend/.env',
+      configStatus: status,
+    };
+  }
 
   try {
     const mailTransporter = getTransporter();
     await mailTransporter.verify();
-    console.log(`✅ [SMTP CONNECTION PASS] Successfully connected & authenticated with ${config.emailHost}:${config.emailPort}`);
-    return { success: true, message: `SMTP connection pass: ${config.emailHost}:${config.emailPort}` };
+    console.log(`✅ [SMTP VERIFIED] Successfully authenticated with ${config.emailHost}:${config.emailPort}`);
+    return {
+      success: true,
+      status: 'SMTP_PASS',
+      message: `Successfully authenticated with ${config.emailHost}:${config.emailPort}`,
+      configStatus: status,
+    };
   } catch (error: any) {
     const rawError = error.message || String(error);
     const code = error.code || error.responseCode || 'SMTP_VERIFY_FAILED';
-    console.error(`❌ [SMTP CONNECTION FAIL] Host: ${config.emailHost}, Error (${code}): ${rawError}`);
-    return { success: false, message: `SMTP Verification Failed [${code}]: ${rawError}` };
+    console.error(`❌ [SMTP VERIFICATION FAILED] Host: ${config.emailHost}, Error (${code}): ${rawError}`);
+    return {
+      success: false,
+      status: 'SMTP_FAIL',
+      message: `SMTP Verification Failed [${code}]: ${rawError}`,
+      configStatus: status,
+    };
   }
-}
-
-// Send Test Email without OTP (Development Endpoint)
-export async function sendSimpleTestEmail(toEmail: string): Promise<nodemailer.SentMessageInfo> {
-  const mailTransporter = getTransporter();
-
-  // 1. Verify SMTP Connection
-  await mailTransporter.verify();
-
-  const sender = config.emailFrom || `"NEXUS OPERA" <${config.emailUser}>`;
-
-  const mailOptions = {
-    from: sender,
-    to: toEmail.trim(), // Exact target email address
-    subject: 'ERP CRM Email Delivery Test',
-    text: 'This is a test email from the ERP CRM application.',
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #334155; border-radius: 12px; background-color: #0f172a; color: #f8fafc;">
-        <h2 style="color: #818cf8; margin-bottom: 12px;">ERP CRM Email Delivery Test</h2>
-        <p style="color: #cbd5e1; font-size: 14px; line-height: 1.5;">
-          This is a test email from the ERP CRM application sent to verify real email delivery for recipient: <strong>${toEmail}</strong>.
-        </p>
-      </div>
-    `,
-  };
-
-  const info = await mailTransporter.sendMail(mailOptions);
-
-  const acceptedList = Array.isArray(info.accepted) ? info.accepted : [];
-  const rejectedList = Array.isArray(info.rejected) ? info.rejected : [];
-
-  if (rejectedList.includes(toEmail.trim()) || acceptedList.length === 0) {
-    console.error(`❌ [SMTP REJECTED TEST EMAIL] Target recipient ${toEmail} was rejected:`, rejectedList);
-    throw new AppError(`Test email delivery rejected by SMTP provider for ${toEmail}`, 500, 'EMAIL_REJECTED');
-  }
-
-  console.log(`✅ [SMTP TEST EMAIL ACCEPTED] Message ID: ${info.messageId}`);
-  console.log(`   Accepted recipients: ${acceptedList.join(', ')}`);
-  console.log(`   Provider Response: ${info.response}`);
-
-  return info;
 }
 
 // Send OTP Email and verify provider acceptance
 export async function sendOtpEmail(toEmail: string, userName: string, otpCode: string): Promise<nodemailer.SentMessageInfo> {
   const mailTransporter = getTransporter();
 
-  // 1. Verify SMTP connection before attempting send
+  // 1. Verify SMTP connection before sending
   try {
     await mailTransporter.verify();
   } catch (verifyError: any) {
@@ -122,7 +117,7 @@ export async function sendOtpEmail(toEmail: string, userName: string, otpCode: s
 
   const mailOptions = {
     from: sender,
-    to: toEmail.trim(), // Exact recipient email entered by user (e.g. 2303031460082@paruluniversity.ac.in)
+    to: toEmail.trim(), // Exact target email address
     subject: 'Verify your email - NEXUS OPERA',
     text: `Hello ${userName || 'User'},\n\nYour verification OTP is:\n\n${otpCode}\n\nThis OTP will expire in 5 minutes.\n\nIf you did not request this verification, please ignore this email.\n\nRegards,\nNEXUS OPERA`,
     html: `
@@ -159,7 +154,7 @@ export async function sendOtpEmail(toEmail: string, userName: string, otpCode: s
     // 2. Dispatch email via Nodemailer
     const info = await mailTransporter.sendMail(mailOptions);
 
-    // 3. Inspect provider response: accepted vs rejected recipients
+    // 3. Inspect provider response
     const acceptedList = Array.isArray(info.accepted) ? info.accepted : [];
     const rejectedList = Array.isArray(info.rejected) ? info.rejected : [];
 
