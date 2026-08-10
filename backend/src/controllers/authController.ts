@@ -132,6 +132,11 @@ export const register = async (req: Request, res: Response, next: NextFunction):
         // Send OTP to dynamic recipient email entered by the user
         await sendOtpEmail(recipientEmail, name, otpCode);
 
+        // DEV LOG: Print OTP to terminal in development mode for instant local testing
+        if (config.nodeEnv !== 'production') {
+          console.log(`ℹ️ [DEV TERMINAL OTP LOG] Verification OTP for ${recipientEmail} is: ${otpCode}`);
+        }
+
         res.status(200).json({
           success: true,
           message: 'OTP has been sent to your email.',
@@ -153,6 +158,11 @@ export const register = async (req: Request, res: Response, next: NextFunction):
 
     // Send OTP to dynamic recipient email entered by the user
     await sendOtpEmail(recipientEmail, name, otpCode);
+
+    // DEV LOG: Print OTP to terminal in development mode for instant local testing
+    if (config.nodeEnv !== 'production') {
+      console.log(`ℹ️ [DEV TERMINAL OTP LOG] Verification OTP for ${recipientEmail} is: ${otpCode}`);
+    }
 
     res.status(201).json({
       success: true,
