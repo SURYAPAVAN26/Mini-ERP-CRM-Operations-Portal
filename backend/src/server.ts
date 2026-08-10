@@ -1,15 +1,30 @@
+import os from 'os';
 import app from './app';
 import { config } from './config/env';
 import { pool } from './config/database';
 
 const PORT = config.port;
 
+function getNetworkIp(): string {
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name] || []) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        return iface.address;
+      }
+    }
+  }
+  return 'localhost';
+}
+
 pool.query('SELECT NOW()')
   .then(() => {
+    const networkIp = getNetworkIp();
     console.log('PostgreSQL database connection established successfully.');
-    app.listen(PORT, () => {
-      console.log(`🚀 Mini ERP + CRM Server running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
-      console.log(`Health check: http://localhost:${PORT}/api/health`);
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`🚀 Mini ERP + CRM Server running on port ${PORT}`);
+      console.log(`🌐 Local Access:    http://localhost:${PORT}/`);
+      console.log(`📡 Network Access:  http://${networkIp}:${PORT}/ (Accessible from any laptop/mobile on Wi-Fi)`);
     });
   })
   .catch((err) => {
