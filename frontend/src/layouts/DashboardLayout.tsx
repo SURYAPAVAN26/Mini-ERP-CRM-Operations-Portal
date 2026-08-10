@@ -60,6 +60,12 @@ const navItems: NavConfig[] = [
     icon: <FileSpreadsheet size={18} />,
     roles: ['ADMIN', 'SALES', 'WAREHOUSE', 'ACCOUNTS'],
   },
+  {
+    name: 'User Management',
+    path: '/users',
+    icon: <UserCheck size={18} />,
+    roles: ['ADMIN'],
+  },
 ];
 
 export const DashboardLayout: React.FC = () => {

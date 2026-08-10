@@ -17,6 +17,8 @@ import { ChallansPage } from './pages/ChallansPage';
 import { CreateChallanPage } from './pages/CreateChallanPage';
 import { ChallanDetailPage } from './pages/ChallanDetailPage';
 
+import { UsersPage } from './pages/UsersPage';
+
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
 
@@ -69,7 +71,8 @@ export const App: React.FC = () => {
             {/* Sales Challans */}
             <Route path="challans" element={<ChallansPage />} />
             <Route path="challans/create" element={<CreateChallanPage />} />
-            <Route path="challans/:id" element={<ChallanDetailPage />} />
+            {/* User Account Management (Admin) */}
+            <Route path="users" element={<UsersPage />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

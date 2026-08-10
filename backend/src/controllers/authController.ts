@@ -29,6 +29,15 @@ export const resendOtpSchema = z.object({
   email: z.string().email('Invalid email address'),
 });
 
+export const adminCreateUserSchema = z.object({
+  name: z.string().min(1, 'Full name is required'),
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(6, 'Password must be at least 6 characters long'),
+  role: z.enum(['ADMIN', 'SALES', 'WAREHOUSE', 'ACCOUNTS'], {
+    required_error: 'Role is required',
+  }),
+});
+
 // Helper to generate a random 6-digit numeric OTP
 function generate6DigitOtp(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -306,6 +315,90 @@ export const getCurrentUser = async (req: Request, res: Response, next: NextFunc
     res.json({
       success: true,
       data: { user },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// 6. ADMIN CREATE USER (System Admin Provisioning with Role Selection)
+export const adminCreateUser = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { name, email, password, role } = req.body;
+    const recipientEmail = String(email).trim();
+
+    // Verify Admin Authorization
+    const currentUserRole = (req as any).user?.role;
+    if (currentUserRole !== 'ADMIN') {
+      throw new AppError('Access denied. Only System Administrators can create accounts with custom roles.', 403, 'FORBIDDEN');
+    }
+
+    const existingUser = await query('SELECT id, is_email_verified FROM users WHERE email = $1', [recipientEmail]);
+    if (existingUser.rows.length > 0) {
+      if (existingUser.rows[0].is_email_verified) {
+        throw new AppError('An account with this email address is already registered.', 400, 'USER_ALREADY_EXISTS');
+      } else {
+        // Update unverified user with new password, role, and fresh OTP
+        const password_hash = await bcrypt.hash(password, 10);
+        const otpCode = generate6DigitOtp();
+        const otpHash = await bcrypt.hash(otpCode, 10);
+
+        await query(
+          `UPDATE users SET name = $1, password_hash = $2, role = $3, otp_code = $4, otp_expires_at = NOW() + INTERVAL '5 minutes', updated_at = NOW()
+           WHERE email = $5`,
+          [name, password_hash, role, otpHash, recipientEmail]
+        );
+
+        await sendOtpEmail(recipientEmail, name, otpCode);
+
+        res.status(200).json({
+          success: true,
+          message: `User created with role '${role}'. Verification OTP sent to email.`,
+          data: { name, email: recipientEmail, role },
+        });
+        return;
+      }
+    }
+
+    const password_hash = await bcrypt.hash(password, 10);
+    const otpCode = generate6DigitOtp();
+    const otpHash = await bcrypt.hash(otpCode, 10);
+
+    const newRecord = await query(
+      `INSERT INTO users (name, email, password_hash, role, is_email_verified, otp_code, otp_expires_at)
+       VALUES ($1, $2, $3, $4, FALSE, $5, NOW() + INTERVAL '5 minutes')
+       RETURNING id, name, email, role, is_email_verified, created_at`,
+      [name, recipientEmail, password_hash, role, otpHash]
+    );
+
+    // Send OTP to dynamic recipient email
+    await sendOtpEmail(recipientEmail, name, otpCode);
+
+    res.status(201).json({
+      success: true,
+      message: `User created with role '${role}'. Verification OTP sent to email.`,
+      data: { user: newRecord.rows[0] },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// 7. GET ALL USERS (Admin Only)
+export const getAllUsers = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const currentUserRole = (req as any).user?.role;
+    if (currentUserRole !== 'ADMIN') {
+      throw new AppError('Access denied. Only System Administrators can view user accounts.', 403, 'FORBIDDEN');
+    }
+
+    const result = await query(
+      'SELECT id, name, email, role, is_email_verified, created_at FROM users ORDER BY created_at DESC'
+    );
+
+    res.json({
+      success: true,
+      data: { users: result.rows },
     });
   } catch (error) {
     next(error);
