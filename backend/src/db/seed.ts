@@ -15,18 +15,22 @@ export async function seedDb() {
 
     const userRes = await pool.query(
       `INSERT INTO users (name, email, password_hash, role) VALUES
+      -- User Admin Account
       ($1, $2, $3, $4),
       ($5, $6, $7, $8),
+      -- Sales Accounts
       ($9, $10, $11, $12),
       ($13, $14, $15, $16),
+      -- Warehouse Accounts
       ($17, $18, $19, $20),
       ($21, $22, $23, $24),
+      -- Accounts Officer
       ($25, $26, $27, $28),
       ($29, $30, $31, $32)
       RETURNING id, name, email, role;`,
       [
+        'Surya Pavan (Admin)', 'kodipathrunisuryapavan2005@gmail.com', passwordHashAdmin, 'ADMIN',
         'System Admin', 'admin@nexusopera.com', passwordHashAdmin, 'ADMIN',
-        'System Admin (Gmail)', 'admin@gmail.com', passwordHashAdmin, 'ADMIN',
 
         'Sarah Sales', 'sales@nexusopera.com', passwordHashSales, 'SALES',
         'Sarah Sales (Gmail)', 'sales@gmail.com', passwordHashSales, 'SALES',
@@ -43,7 +47,7 @@ export async function seedDb() {
     const salesId = userRes.rows.find((u) => u.role === 'SALES')?.id;
     const warehouseId = userRes.rows.find((u) => u.role === 'WAREHOUSE')?.id;
 
-    console.log('Registered test users created for both work domain and Gmail accounts.');
+    console.log('Registered test users created including kodipathrunisuryapavan2005@gmail.com.');
 
     // 2. Create Sample Customers
     const customerRes = await pool.query(
