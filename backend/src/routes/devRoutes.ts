@@ -1,5 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { getTransporter, verifySmtpConnection } from '../services/emailService';
+import { getTransporter, verifySmtpConnection, sendSimpleTestEmail } from '../services/emailService';
 import { config } from '../config/env';
 import { AppError } from '../middleware/errorHandler';
 
@@ -21,39 +21,25 @@ router.use((req: Request, res: Response, next: NextFunction) => {
 router.get('/verify-smtp', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const result = await verifySmtpConnection();
-    if (result.success) {
-      res.json({
-        success: true,
-        message: result.message,
-        config: {
-          host: config.emailHost,
-          port: config.emailPort,
-          secure: config.emailSecure,
-          userConfigured: !!config.emailUser,
-          passConfigured: !!config.emailPassword,
-          from: config.emailFrom,
-        },
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: result.message,
-        config: {
-          host: config.emailHost,
-          port: config.emailPort,
-          secure: config.emailSecure,
-          userConfigured: !!config.emailUser,
-          passConfigured: !!config.emailPassword,
-          from: config.emailFrom,
-        },
-      });
-    }
+    res.json({
+      success: result.success,
+      smtpConnection: result.success ? 'PASS' : 'FAIL',
+      message: result.message,
+      config: {
+        host: config.emailHost || 'NOT CONFIGURED',
+        port: config.emailPort,
+        secure: config.emailSecure,
+        userConfigured: !!config.emailUser,
+        passConfigured: !!config.emailPassword,
+        from: config.emailFrom || 'NOT CONFIGURED',
+      },
+    });
   } catch (error) {
     next(error);
   }
 });
 
-// POST /api/dev/test-email - Send a test email to specified test address
+// POST /api/dev/test-email - Send a test email to specified test address (e.g. 2303031460082@paruluniversity.ac.in)
 router.post('/test-email', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email } = req.body;
@@ -62,49 +48,23 @@ router.post('/test-email', async (req: Request, res: Response, next: NextFunctio
       throw new AppError('Recipient email address is required', 400, 'MISSING_EMAIL');
     }
 
-    const mailTransporter = await getTransporter();
-    
-    // 1. Verify connection
-    await mailTransporter.verify();
+    const targetEmail = String(email).trim();
 
-    const sender = config.emailFrom || `"NEXUS OPERA" <${config.emailUser}>`;
-
-    // 2. Send test email
-    const info = await mailTransporter.sendMail({
-      from: sender,
-      to: email.trim(),
-      subject: 'Test Email - NEXUS OPERA',
-      text: 'This is a test email from NEXUS OPERA development environment.',
-      html: `
-        <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #6366f1; border-radius: 8px; background: #0f172a; color: #ffffff;">
-          <h2 style="color: #818cf8;">Test Email - NEXUS OPERA</h2>
-          <p>This is a test email sent from the NEXUS OPERA development environment to verify SMTP email delivery.</p>
-          <p style="color: #94a3b8; font-size: 13px;">Recipient: ${email}</p>
-        </div>
-      `,
-    });
+    // Send simple test email without OTP
+    const info = await sendSimpleTestEmail(targetEmail);
 
     const acceptedList = Array.isArray(info.accepted) ? info.accepted : [];
     const rejectedList = Array.isArray(info.rejected) ? info.rejected : [];
 
-    if (rejectedList.includes(email.trim()) || acceptedList.length === 0) {
-      res.status(500).json({
-        success: false,
-        message: 'Test email was rejected by SMTP provider',
-        rejected: rejectedList,
-      });
-      return;
-    }
-
     res.json({
       success: true,
-      message: 'Test email successfully accepted by SMTP provider!',
-      data: {
-        messageId: info.messageId,
-        accepted: acceptedList,
-        rejected: rejectedList,
-        response: info.response,
-      },
+      smtpConnection: 'PASS',
+      provider: config.emailHost || 'SMTP Server',
+      recipient: acceptedList.includes(targetEmail) ? 'accepted' : 'rejected',
+      messageId: info.messageId,
+      acceptedRecipients: acceptedList,
+      rejectedRecipients: rejectedList,
+      smtpResponse: info.response,
     });
   } catch (error: any) {
     next(error);
