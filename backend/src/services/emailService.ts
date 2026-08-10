@@ -36,7 +36,7 @@ export function getTransporter(): nodemailer.Transporter {
 
   if (!config.emailHost || !config.emailUser || !config.emailPassword) {
     throw new AppError(
-      'SMTP credentials missing in backend/.env. Please enter EMAIL_USER and EMAIL_PASSWORD in backend/.env to send real emails.',
+      'SMTP credentials are not configured. Please enter EMAIL_USER and EMAIL_PASSWORD in backend/.env file.',
       500,
       'SMTP_NOT_CONFIGURED'
     );
