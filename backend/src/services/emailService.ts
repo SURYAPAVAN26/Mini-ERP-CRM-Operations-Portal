@@ -4,33 +4,33 @@ import { AppError } from '../middleware/errorHandler';
 
 let cachedTransporter: nodemailer.Transporter | null = null;
 
-async function getTransporter(): Promise<nodemailer.Transporter> {
+export async function getTransporter(): Promise<nodemailer.Transporter> {
   if (cachedTransporter) {
     return cachedTransporter;
   }
 
-  // Check if custom SMTP host and credentials are set in .env
+  // 1. If SMTP Host & User are configured in backend/.env
   if (config.emailHost && config.emailUser) {
-    console.log(`[SMTP CONFIG] Creating transporter for ${config.emailHost}:${config.emailPort} (User: ${config.emailUser}, Secure: ${config.emailSecure})`);
+    console.log(`[SMTP CONFIG] Using custom SMTP server: ${config.emailHost}:${config.emailPort} (User: ${config.emailUser}, Secure: ${config.emailSecure})`);
     
     cachedTransporter = nodemailer.createTransport({
       host: config.emailHost,
       port: config.emailPort,
-      secure: config.emailSecure,
+      secure: config.emailSecure, // true for 465, false for 587
       auth: {
         user: config.emailUser,
         pass: config.emailPassword,
       },
       tls: {
-        rejectUnauthorized: false, // Prevents certificate verification issues
+        rejectUnauthorized: false,
       },
     });
 
     return cachedTransporter;
   }
 
-  // Fallback for local development when SMTP_HOST is not yet configured in .env
-  console.log('ℹ️ [SMTP INFO] SMTP_HOST not set in .env. Initializing Ethereal test email sandbox...');
+  // 2. Local Development Sandbox Fallback (Ethereal test accounts)
+  console.log('ℹ️ [SMTP INFO] SMTP_HOST not configured in backend/.env. Creating Ethereal sandbox transporter...');
   const testAccount = await nodemailer.createTestAccount();
   
   cachedTransporter = nodemailer.createTransport({
@@ -43,43 +43,63 @@ async function getTransporter(): Promise<nodemailer.Transporter> {
     },
   });
 
-  console.log(`[SMTP DEV SANDBOX] Ethereal test transporter ready (User: ${testAccount.user})`);
+  console.log(`[SMTP DEV SANDBOX] Ethereal test inbox ready (Account: ${testAccount.user})`);
   return cachedTransporter;
 }
 
-// SMTP Connection Verification Test
-export async function verifySmtpConnection(): Promise<boolean> {
+// Log safe configuration details without printing passwords
+export function logSafeSmtpConfig(): void {
+  console.log('--- SMTP Configuration Summary ---');
+  console.log(`SMTP Host:     ${config.emailHost || 'NOT CONFIGURED (Using Ethereal Sandbox)'}`);
+  console.log(`SMTP Port:     ${config.emailPort} (secure: ${config.emailSecure})`);
+  console.log(`SMTP User:     ${config.emailUser ? `configured (${config.emailUser})` : 'NOT CONFIGURED'}`);
+  console.log(`SMTP Password: ${config.emailPassword ? 'configured' : 'NOT CONFIGURED'}`);
+  console.log(`FROM Address:  ${config.emailFrom || 'NOT CONFIGURED'}`);
+  console.log('----------------------------------');
+}
+
+// Test SMTP connection via transporter.verify()
+export async function verifySmtpConnection(): Promise<{ success: boolean; message: string }> {
+  logSafeSmtpConfig();
+
   try {
     const mailTransporter = await getTransporter();
     await mailTransporter.verify();
+    
     if (config.emailHost) {
-      console.log(`✅ [SMTP VERIFIED] Successfully connected to ${config.emailHost}:${config.emailPort}`);
+      console.log(`✅ [SMTP VERIFIED] Successfully authenticated with ${config.emailHost}:${config.emailPort}`);
+      return { success: true, message: `Successfully authenticated with ${config.emailHost}:${config.emailPort}` };
+    } else {
+      console.log(`ℹ️ [SMTP SANDBOX VERIFIED] Ethereal dev inbox ready.`);
+      return { success: true, message: `Ethereal dev sandbox ready. Set EMAIL_HOST and EMAIL_USER in .env for live inbox delivery.` };
     }
-    return true;
   } catch (error: any) {
-    const errorMsg = error.message || String(error);
-    const code = error.code || error.responseCode || 'SMTP_ERROR';
-    console.error(`❌ [SMTP VERIFICATION FAILED] Host: ${config.emailHost}, Error (${code}): ${errorMsg}`);
-    return false;
+    const rawError = error.message || String(error);
+    const code = error.code || error.responseCode || 'SMTP_VERIFY_FAILED';
+    console.error(`❌ [SMTP VERIFICATION FAILED] Host: ${config.emailHost || 'ethereal'}, Error (${code}): ${rawError}`);
+    return { success: false, message: `SMTP Verification Failed [${code}]: ${rawError}` };
   }
 }
 
-export async function sendOtpEmail(toEmail: string, userName: string, otpCode: string): Promise<void> {
-  let mailTransporter: nodemailer.Transporter;
-  
+// Send OTP Email and verify provider acceptance
+export async function sendOtpEmail(toEmail: string, userName: string, otpCode: string): Promise<nodemailer.SentMessageInfo> {
+  const mailTransporter = await getTransporter();
+
+  // 1. Verify SMTP connection before attempting send
   try {
-    mailTransporter = await getTransporter();
-  } catch (initError: any) {
-    const initMsg = initError.message || String(initError);
-    console.error('❌ [SMTP INIT FAILED]:', initMsg);
-    throw new AppError(`SMTP Configuration Error: ${initMsg}`, 500, 'SMTP_INIT_FAILED');
+    await mailTransporter.verify();
+  } catch (verifyError: any) {
+    const vMsg = verifyError.message || String(verifyError);
+    const vCode = verifyError.code || verifyError.responseCode || 'SMTP_AUTH_FAILED';
+    console.error(`❌ [SMTP AUTH FAILED] Cannot send email to ${toEmail}. Error (${vCode}): ${vMsg}`);
+    throw new AppError(`SMTP Connection/Auth Failed [${vCode}]: ${vMsg}`, 500, 'SMTP_AUTH_FAILED');
   }
 
   const sender = config.emailFrom || (config.emailUser ? `"NEXUS OPERA" <${config.emailUser}>` : 'NEXUS OPERA <noreply@nexusopera.com>');
 
   const mailOptions = {
     from: sender,
-    to: toEmail,
+    to: toEmail.trim(), // Exact recipient email entered by user
     subject: 'Verify your email - NEXUS OPERA',
     text: `Hello ${userName || 'User'},\n\nYour verification OTP is:\n\n${otpCode}\n\nThis OTP will expire in 5 minutes.\n\nIf you did not request this verification, please ignore this email.\n\nRegards,\nNEXUS OPERA`,
     html: `
@@ -113,14 +133,32 @@ export async function sendOtpEmail(toEmail: string, userName: string, otpCode: s
   };
 
   try {
+    // 2. Dispatch email via Nodemailer
     const info = await mailTransporter.sendMail(mailOptions);
-    
-    if (nodemailer.getTestMessageUrl(info)) {
-      console.log(`📧 [ETHEREAL DEV INBOX] Test Email Sent! View message online: ${nodemailer.getTestMessageUrl(info)}`);
-    } else {
-      console.log(`✅ [EMAIL DELIVERED] OTP Email successfully accepted by SMTP server for ${toEmail} (MessageId: ${info.messageId})`);
+
+    // 3. Inspect provider response: accepted vs rejected recipients
+    const acceptedList = Array.isArray(info.accepted) ? info.accepted : [];
+    const rejectedList = Array.isArray(info.rejected) ? info.rejected : [];
+
+    if (rejectedList.includes(toEmail.trim()) || acceptedList.length === 0) {
+      console.error(`❌ [SMTP REJECTED] Recipient ${toEmail} was rejected by SMTP server:`, rejectedList);
+      throw new AppError(`Email delivery was rejected by SMTP provider for ${toEmail}`, 500, 'EMAIL_REJECTED');
     }
+
+    if (nodemailer.getTestMessageUrl(info)) {
+      console.log(`📧 [DEV SANDBOX INBOX] Ethereal Message Sent! Preview online: ${nodemailer.getTestMessageUrl(info)}`);
+    } else {
+      console.log(`✅ [EMAIL ACCEPTED BY SMTP] Message ID: ${info.messageId}`);
+      console.log(`   Accepted recipients: ${acceptedList.join(', ')}`);
+      console.log(`   Provider Response: ${info.response}`);
+    }
+
+    return info;
   } catch (sendError: any) {
+    if (sendError instanceof AppError) {
+      throw sendError;
+    }
+
     const rawError = sendError.message || String(sendError);
     const code = sendError.code || sendError.responseCode || 'SMTP_SEND_FAILED';
 
@@ -128,11 +166,7 @@ export async function sendOtpEmail(toEmail: string, userName: string, otpCode: s
     console.error(`   Error Code: ${code}`);
     console.error(`   Error Message: ${rawError}`);
 
-    let userFriendlyMsg = 'Unable to send verification email. Please check your email address or SMTP configuration.';
-    if (process.env.NODE_ENV !== 'production') {
-      userFriendlyMsg += ` Details: [${code}] ${rawError}`;
-    }
-
-    throw new AppError(userFriendlyMsg, 500, 'EMAIL_DELIVERY_FAILED');
+    let devErrMsg = `Unable to send verification email. SMTP Error [${code}]: ${rawError}`;
+    throw new AppError(devErrMsg, 500, 'EMAIL_DELIVERY_FAILED');
   }
 }

@@ -1,7 +1,9 @@
 import dotenv from 'dotenv';
 import path from 'path';
 
-dotenv.config({ path: path.join(__dirname, '../../.env') });
+// Force load backend/.env file
+const envPath = path.resolve(__dirname, '../../.env');
+dotenv.config({ path: envPath });
 
 const host = process.env.EMAIL_HOST || process.env.SMTP_HOST || '';
 const portStr = process.env.EMAIL_PORT || process.env.SMTP_PORT || '587';
@@ -11,6 +13,7 @@ const from = process.env.EMAIL_FROM || process.env.SMTP_FROM || '';
 const secureStr = process.env.EMAIL_SECURE || process.env.SMTP_SECURE || '';
 
 const port = parseInt(portStr, 10);
+// Default secure=true for 465, false for 587
 const secure = secureStr ? secureStr.toLowerCase() === 'true' : port === 465;
 
 export const config = {
@@ -19,12 +22,13 @@ export const config = {
   jwtSecret: process.env.JWT_SECRET || 'super_secret_jwt_key_mini_erp_crm_2026',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '24h',
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+  nodeEnv: process.env.NODE_ENV || 'development',
   
   // Email / SMTP Configuration
   emailHost: host.trim(),
   emailPort: port,
   emailSecure: secure,
   emailUser: user.trim(),
-  emailPassword: pass.trim(),
-  emailFrom: from.trim() || (user.trim() ? `"NEXUS OPERA" <${user.trim()}>` : 'NEXUS OPERA <noreply@nexusopera.com>'),
+  emailPassword: pass.replace(/\s+/g, ''), // Strip spaces from Gmail App Passwords
+  emailFrom: from.trim() || (user.trim() ? `"NEXUS OPERA" <${user.trim()}>` : ''),
 };
