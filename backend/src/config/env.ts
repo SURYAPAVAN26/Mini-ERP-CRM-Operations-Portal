@@ -9,4 +9,9 @@ export const config = {
   jwtSecret: process.env.JWT_SECRET || 'super_secret_jwt_key_mini_erp_crm_2026',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '24h',
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+  emailHost: process.env.EMAIL_HOST || '',
+  emailPort: parseInt(process.env.EMAIL_PORT || '587', 10),
+  emailUser: process.env.EMAIL_USER || '',
+  emailPassword: process.env.EMAIL_PASSWORD || '',
+  emailFrom: process.env.EMAIL_FROM || 'NEXUS OPERA Security <noreply@nexusopera.com>',
 };

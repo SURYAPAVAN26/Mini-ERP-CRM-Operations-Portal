@@ -1,33 +1,43 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { Shield, KeyRound, ArrowRight, CheckCircle2, RefreshCw } from 'lucide-react';
+import { Shield, KeyRound, CheckCircle2, RefreshCw, Mail, AlertCircle } from 'lucide-react';
 import { api } from '../services/api';
 
 export const VerifyOtpPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const emailParam = searchParams.get('email') || '';
-  const demoOtpParam = searchParams.get('otp') || '';
 
   const [email, setEmail] = useState(emailParam);
-  const [otp, setOtp] = useState(demoOtpParam);
+  const [otp, setOtp] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>('OTP has been sent to your email.');
   const [loading, setLoading] = useState(false);
+  const [cooldown, setCooldown] = useState(60);
+  const [canResend, setCanResend] = useState(false);
 
   useEffect(() => {
-    if (demoOtpParam) {
-      setOtp(demoOtpParam);
+    let timer: any;
+    if (cooldown > 0 && !canResend) {
+      timer = setInterval(() => {
+        setCooldown((prev) => {
+          if (prev <= 1) {
+            setCanResend(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
     }
-  }, [demoOtpParam]);
+    return () => clearInterval(timer);
+  }, [cooldown, canResend]);
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setMessage(null);
 
-    if (otp.length !== 6) {
-      setError('Please enter the complete 6-digit OTP verification code');
+    if (otp.trim().length !== 6) {
+      setError('Please enter the 6-digit OTP code sent to your email.');
       return;
     }
 
@@ -46,25 +56,25 @@ export const VerifyOtpPage: React.FC = () => {
         window.location.href = '/dashboard';
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Verification failed. Please check the OTP code.');
+      setError(err.response?.data?.message || 'Invalid OTP. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleResend = async () => {
+    if (!canResend) return;
     setError(null);
     setMessage(null);
     try {
-      const res = await api.post('/auth/resend-otp', { email });
+      const res = await api.post('/auth/resend-otp', { email: email.trim() });
       if (res.data.success) {
-        setMessage('A new 6-digit OTP code has been generated!');
-        if (res.data.data?.otp_code) {
-          setOtp(res.data.data.otp_code);
-        }
+        setMessage('OTP has been sent to your email.');
+        setCanResend(false);
+        setCooldown(60);
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to resend OTP.');
+      setError(err.response?.data?.message || 'Failed to resend OTP. Please try again.');
     }
   };
 
@@ -77,69 +87,61 @@ export const VerifyOtpPage: React.FC = () => {
       background: 'radial-gradient(circle at top left, #1e1b4b 0%, #0f172a 60%, #020617 100%)',
       padding: '20px'
     }}>
-      <div style={{ width: '100%', maxWidth: '480px' }}>
+      <div style={{ width: '100%', maxWidth: '460px' }}>
         <div className="card card-glass" style={{ padding: '40px' }}>
           <div style={{ textAlign: 'center', marginBottom: '24px' }}>
             <div style={{
               display: 'inline-flex',
-              background: 'rgba(16, 185, 129, 0.2)',
+              background: 'rgba(99, 102, 241, 0.2)',
               padding: '16px',
               borderRadius: '20px',
-              border: '1px solid rgba(16, 185, 129, 0.4)',
+              border: '1px solid rgba(99, 102, 241, 0.4)',
               marginBottom: '16px'
             }}>
-              <KeyRound size={40} color="#34d399" />
+              <KeyRound size={36} color="#818cf8" />
             </div>
-            <h1 style={{ fontSize: '1.7rem', background: 'linear-gradient(135deg, #34d399 0%, #38bdf8 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: '4px' }}>
-              Email Verification OTP
+            <h1 style={{ fontSize: '1.7rem', background: 'linear-gradient(135deg, #818cf8 0%, #38bdf8 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: '6px' }}>
+              Enter Email OTP
             </h1>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>
-              Enter the 6-digit code generated for <strong>{email || 'your email'}</strong>
+              Check your email inbox and enter the 6-digit verification code
             </p>
           </div>
 
-          {demoOtpParam && (
-            <div style={{
-              background: 'rgba(16, 185, 129, 0.15)',
-              border: '1px solid rgba(16, 185, 129, 0.4)',
-              borderRadius: '10px',
-              padding: '12px 16px',
-              marginBottom: '20px',
-              textAlign: 'center'
-            }}>
-              <div style={{ fontSize: '0.8rem', color: '#34d399', fontWeight: 700, textTransform: 'uppercase' }}>
-                Generated OTP Verification Code:
-              </div>
-              <div style={{ fontSize: '1.6rem', fontWeight: 800, letterSpacing: '6px', fontFamily: 'var(--font-mono)', color: '#ffffff', margin: '4px 0' }}>
-                {demoOtpParam}
-              </div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                Click 'Verify Email Code' below to log in instantly.
-              </div>
+          {message && (
+            <div className="alert alert-success" style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Mail size={18} />
+              <span>{message}</span>
             </div>
           )}
 
           {error && (
-            <div className="alert alert-danger" style={{ marginBottom: '20px' }}>
+            <div className="alert alert-danger" style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <AlertCircle size={18} />
               <span>{error}</span>
-            </div>
-          )}
-
-          {message && (
-            <div className="alert alert-success" style={{ marginBottom: '20px' }}>
-              <span>{message}</span>
             </div>
           )}
 
           <form onSubmit={handleVerify}>
             <div className="form-group">
-              <label>6-Digit OTP Code *</label>
+              <label>Email Address</label>
+              <input
+                type="email"
+                className="form-control"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label>6-Digit OTP Code</label>
               <input
                 type="text"
                 maxLength={6}
                 className="form-control"
                 style={{ textAlign: 'center', fontSize: '1.5rem', letterSpacing: '8px', fontFamily: 'var(--font-mono)' }}
-                placeholder="123456"
+                placeholder="••••••"
                 value={otp}
                 onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ''))}
                 required
@@ -148,22 +150,28 @@ export const VerifyOtpPage: React.FC = () => {
             </div>
 
             <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '12px', padding: '12px', fontSize: '0.95rem' }} disabled={loading}>
-              {loading ? 'Verifying Code...' : (
+              {loading ? 'Verifying OTP...' : (
                 <>
                   <CheckCircle2 size={18} />
-                  <span>Verify Email Code & Continue</span>
+                  <span>Verify OTP</span>
                 </>
               )}
             </button>
           </form>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', fontSize: '0.85rem' }}>
-            <button type="button" className="btn btn-sm btn-secondary" onClick={handleResend}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '24px', fontSize: '0.85rem' }}>
+            <button
+              type="button"
+              className="btn btn-sm btn-secondary"
+              onClick={handleResend}
+              disabled={!canResend}
+            >
               <RefreshCw size={14} />
-              <span>Resend OTP Code</span>
+              <span>{canResend ? 'Resend OTP' : `Resend in ${cooldown}s`}</span>
             </button>
+
             <Link to="/login" style={{ color: 'var(--text-muted)' }}>
-              Back to Login
+              Back to Sign In
             </Link>
           </div>
         </div>

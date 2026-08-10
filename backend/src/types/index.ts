@@ -19,6 +19,9 @@ export interface User {
   email: string;
   password_hash: string;
   role: UserRole;
+  is_email_verified?: boolean;
+  otp_code?: string | null;
+  otp_expires_at?: Date | null;
   created_at: Date;
   updated_at: Date;
 }

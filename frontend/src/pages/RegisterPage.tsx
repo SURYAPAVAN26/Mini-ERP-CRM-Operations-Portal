@@ -34,8 +34,8 @@ export const RegisterPage: React.FC = () => {
       });
 
       if (res.data.success) {
-        const { email: registeredEmail, otp_code } = res.data.data;
-        navigate(`/verify-otp?email=${encodeURIComponent(registeredEmail)}&otp=${encodeURIComponent(otp_code || '')}`);
+        const { email: registeredEmail } = res.data.data;
+        navigate(`/verify-otp?email=${encodeURIComponent(registeredEmail)}`);
       }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to create account. Please try again.');
