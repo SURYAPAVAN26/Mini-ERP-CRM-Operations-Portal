@@ -34,10 +34,8 @@ export const RegisterPage: React.FC = () => {
       });
 
       if (res.data.success) {
-        const { token, user } = res.data.data;
-        localStorage.setItem('erp_token', token);
-        localStorage.setItem('erp_user', JSON.stringify(user));
-        window.location.href = '/dashboard';
+        const { email: registeredEmail, otp_code } = res.data.data;
+        navigate(`/verify-otp?email=${encodeURIComponent(registeredEmail)}&otp=${encodeURIComponent(otp_code || '')}`);
       }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to create account. Please try again.');

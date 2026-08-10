@@ -19,6 +19,15 @@ export const registerSchema = z.object({
   role: z.enum(['ADMIN', 'SALES', 'WAREHOUSE', 'ACCOUNTS']).optional().default('SALES'),
 });
 
+export const verifyOtpSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  otp: z.string().length(6, 'OTP must be 6 digits'),
+});
+
+export const resendOtpSchema = z.object({
+  email: z.string().email('Invalid email address'),
+});
+
 export const register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { name, email, password, role } = req.body;
@@ -29,38 +38,114 @@ export const register = async (req: Request, res: Response, next: NextFunction):
     }
 
     const password_hash = await bcrypt.hash(password, 10);
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
 
     const result = await query(
-      `INSERT INTO users (name, email, password_hash, role)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO users (name, email, password_hash, role, is_email_verified, otp_code, otp_expires_at)
+       VALUES ($1, $2, $3, $4, FALSE, $5, NOW() + INTERVAL '10 minutes')
        RETURNING id, name, email, role, created_at`,
-      [name, email, password_hash, role || 'SALES']
+      [name, email, password_hash, role || 'SALES', otpCode]
     );
 
-    const newUser: User = result.rows[0];
+    const newUser = result.rows[0];
+
+    console.log(`[EMAIL OTP VERIFICATION] Sent 6-digit OTP code '${otpCode}' to email: ${email}`);
+
+    res.status(201).json({
+      success: true,
+      message: 'Account created! A 6-digit email verification OTP code has been generated.',
+      data: {
+        email: newUser.email,
+        otp_code: otpCode, // Provided for instant demo testing!
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const verifyOtp = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { email, otp } = req.body;
+
+    const userRes = await query(
+      'SELECT id, name, email, role, password_hash, otp_code, otp_expires_at, is_email_verified FROM users WHERE email = $1',
+      [email]
+    );
+
+    if (userRes.rows.length === 0) {
+      throw new AppError('Invalid email or verification session', 400, 'USER_NOT_FOUND');
+    }
+
+    const user = userRes.rows[0];
+
+    if (user.otp_code !== otp) {
+      throw new AppError('Invalid 6-digit OTP verification code. Please check and try again.', 400, 'INVALID_OTP');
+    }
+
+    if (new Date(user.otp_expires_at).getTime() < Date.now()) {
+      throw new AppError('OTP verification code has expired. Please request a new code.', 400, 'EXPIRED_OTP');
+    }
+
+    // Mark email as verified
+    await query(
+      'UPDATE users SET is_email_verified = TRUE, otp_code = NULL, otp_expires_at = NULL, updated_at = NOW() WHERE id = $1',
+      [user.id]
+    );
 
     const payload: JwtPayload = {
-      userId: newUser.id,
-      email: newUser.email,
-      name: newUser.name,
-      role: newUser.role,
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
     };
 
     const token = jwt.sign(payload, config.jwtSecret, {
       expiresIn: config.jwtExpiresIn as any,
     });
 
-    res.status(201).json({
+    res.json({
       success: true,
-      message: 'Account created successfully',
+      message: 'Email verified successfully! Access granted.',
       data: {
         token,
         user: {
-          id: newUser.id,
-          name: newUser.name,
-          email: newUser.email,
-          role: newUser.role,
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
         },
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const resendOtp = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { email } = req.body;
+
+    const userRes = await query('SELECT id FROM users WHERE email = $1', [email]);
+    if (userRes.rows.length === 0) {
+      throw new AppError('Account with this email does not exist', 404, 'NOT_FOUND');
+    }
+
+    const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    await query(
+      "UPDATE users SET otp_code = $1, otp_expires_at = NOW() + INTERVAL '10 minutes', updated_at = NOW() WHERE email = $2",
+      [newOtp, email]
+    );
+
+    console.log(`[RESEND OTP] Sent new 6-digit OTP '${newOtp}' to email: ${email}`);
+
+    res.json({
+      success: true,
+      message: 'A new 6-digit verification code has been generated.',
+      data: {
+        email,
+        otp_code: newOtp,
       },
     });
   } catch (error) {

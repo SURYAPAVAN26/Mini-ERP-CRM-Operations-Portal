@@ -14,19 +14,19 @@ export async function seedDb() {
     const passwordHashAccounts = await bcrypt.hash('accounts123', 10);
 
     const userRes = await pool.query(
-      `INSERT INTO users (name, email, password_hash, role) VALUES
+      `INSERT INTO users (name, email, password_hash, role, is_email_verified) VALUES
       -- User Admin Account
-      ($1, $2, $3, $4),
-      ($5, $6, $7, $8),
+      ($1, $2, $3, $4, TRUE),
+      ($5, $6, $7, $8, TRUE),
       -- Sales Accounts
-      ($9, $10, $11, $12),
-      ($13, $14, $15, $16),
+      ($9, $10, $11, $12, TRUE),
+      ($13, $14, $15, $16, TRUE),
       -- Warehouse Accounts
-      ($17, $18, $19, $20),
-      ($21, $22, $23, $24),
+      ($17, $18, $19, $20, TRUE),
+      ($21, $22, $23, $24, TRUE),
       -- Accounts Officer
-      ($25, $26, $27, $28),
-      ($29, $30, $31, $32)
+      ($25, $26, $27, $28, TRUE),
+      ($29, $30, $31, $32, TRUE)
       RETURNING id, name, email, role;`,
       [
         'Surya Pavan (Admin)', 'kodipathrunisuryapavan2005@gmail.com', passwordHashAdmin, 'ADMIN',
