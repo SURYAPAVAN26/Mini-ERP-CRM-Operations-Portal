@@ -7,24 +7,35 @@ export async function seedDb() {
   console.log('Seeding initial database data...');
 
   try {
-    // 1. Create Professional Test Users
-    const passwordHashAdmin = await bcrypt.hash('nexusAdmin123!', 10);
-    const passwordHashSales = await bcrypt.hash('nexusSales123!', 10);
-    const passwordHashWarehouse = await bcrypt.hash('nexusWarehouse123!', 10);
-    const passwordHashAccounts = await bcrypt.hash('nexusAccounts123!', 10);
+    // Hashes
+    const passwordHashAdmin = await bcrypt.hash('admin123', 10);
+    const passwordHashSales = await bcrypt.hash('sales123', 10);
+    const passwordHashWarehouse = await bcrypt.hash('warehouse123', 10);
+    const passwordHashAccounts = await bcrypt.hash('accounts123', 10);
 
     const userRes = await pool.query(
       `INSERT INTO users (name, email, password_hash, role) VALUES
       ($1, $2, $3, $4),
       ($5, $6, $7, $8),
       ($9, $10, $11, $12),
-      ($13, $14, $15, $16)
-      RETURNING id, name, role;`,
+      ($13, $14, $15, $16),
+      ($17, $18, $19, $20),
+      ($21, $22, $23, $24),
+      ($25, $26, $27, $28),
+      ($29, $30, $31, $32)
+      RETURNING id, name, email, role;`,
       [
         'System Admin', 'admin@nexusopera.com', passwordHashAdmin, 'ADMIN',
+        'System Admin (Gmail)', 'admin@gmail.com', passwordHashAdmin, 'ADMIN',
+
         'Sarah Sales', 'sales@nexusopera.com', passwordHashSales, 'SALES',
+        'Sarah Sales (Gmail)', 'sales@gmail.com', passwordHashSales, 'SALES',
+
         'Wally Warehouse', 'warehouse@nexusopera.com', passwordHashWarehouse, 'WAREHOUSE',
+        'Wally Warehouse (Gmail)', 'warehouse@gmail.com', passwordHashWarehouse, 'WAREHOUSE',
+
         'Alice Accounts', 'accounts@nexusopera.com', passwordHashAccounts, 'ACCOUNTS',
+        'Alice Accounts (Gmail)', 'accounts@gmail.com', passwordHashAccounts, 'ACCOUNTS',
       ]
     );
 
@@ -32,7 +43,7 @@ export async function seedDb() {
     const salesId = userRes.rows.find((u) => u.role === 'SALES')?.id;
     const warehouseId = userRes.rows.find((u) => u.role === 'WAREHOUSE')?.id;
 
-    console.log('Professional test users created.');
+    console.log('Registered test users created for both work domain and Gmail accounts.');
 
     // 2. Create Sample Customers
     const customerRes = await pool.query(
